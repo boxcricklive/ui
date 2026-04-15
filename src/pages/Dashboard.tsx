@@ -22,18 +22,33 @@ export default function Dashboard() {
     setIsServerUp(null);
     try {
       if (username) {
-        const statsRes = await api.get(`/api/Player/GetPlayerStatsByUsername?playerUsername=${encodeURIComponent(username)}`);
-        setPlayerStats(statsRes.data);
+        try {
+          const statsRes = await api.get(`/api/Player/GetPlayerStatsByUsername?playerUsername=${encodeURIComponent(username)}`);
+          setPlayerStats(statsRes.data);
+        } catch (e) {
+          console.warn('Player stats endpoint not found or failed, using defaults');
+          setPlayerStats(null);
+        }
       }
-      // Attempt to fetch live matches if endpoint exists, otherwise set to null
+      // Attempt to fetch live matches if endpoint exists, otherwise fallback to GetMatches
       try {
         const liveRes = await api.get('/api/Match/GetLiveMatches');
         if (liveRes.data && Array.isArray(liveRes.data)) {
           setLiveMatch(liveRes.data[0]); // Show the first live match
+        } else {
+          throw new Error('No live matches data');
         }
       } catch (e) {
-        console.log('Live matches endpoint not found or failed');
-        setLiveMatch(null);
+        console.log('Live matches endpoint not found or failed, trying fallback...');
+        try {
+          const allMatchesRes = await api.get('/api/Match/GetMatches');
+          if (allMatchesRes.data && Array.isArray(allMatchesRes.data)) {
+            const live = allMatchesRes.data.find((m: any) => m.status === 'Live');
+            setLiveMatch(live || null);
+          }
+        } catch (fallbackErr) {
+          setLiveMatch(null);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching dashboard data', err);

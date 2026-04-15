@@ -28,3 +28,12 @@
 .btn-accent {
   @apply w-full bg-brand-primary text-brand-dark font-bold py-4 rounded-md flex items-center justify-center gap-2 hover:opacity-90 transition-all;
 }
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite ease-in-out;
+}

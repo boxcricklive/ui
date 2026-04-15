@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
+import { User, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 
 export default function SignupPage() {
@@ -13,12 +13,9 @@ export default function SignupPage() {
   }, [navigate]);
 
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
     username: '',
     password: '',
     confirmPassword: '',
-    playerAlias: '',
     countryCode: 'IN',
     skill: 'All-Rounder'
   });
@@ -30,12 +27,6 @@ export default function SignupPage() {
     
     // Special character validation
     const specialCharRegex = /[^a-zA-Z0-9._]/;
-    const nameRegex = /[^a-zA-Z\s]/;
-
-    if (nameRegex.test(formData.fullName)) {
-      setError('Full Name should only contain letters and spaces.');
-      return;
-    }
 
     if (specialCharRegex.test(formData.username)) {
       setError('Username should only contain letters, numbers, dots, and underscores.');
@@ -52,13 +43,13 @@ export default function SignupPage() {
     try {
       await api.post('/api/Auth/Signup', {
         playerUsername: formData.username,
-        email: formData.email || null,
+        email: null,
         password: formData.password,
-        playerAlias: formData.playerAlias || formData.fullName,
+        playerAlias: formData.username,
         countryCode: formData.countryCode,
         skill: formData.skill
       });
-      navigate('/login');
+      navigate('/login', { state: { signupSuccess: true } });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Signup failed. Try a different username.');
     } finally {
@@ -76,48 +67,16 @@ export default function SignupPage() {
 
         <form onSubmit={handleSignup} className="space-y-5">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input 
-                type="text" 
-                placeholder="Enter your full name" 
-                className={`input-field pl-12 ${error && formData.fullName.length > 0 && /[^a-zA-Z\s]/.test(formData.fullName) ? 'ring-2 ring-red-500' : ''}`}
-                value={formData.fullName}
-                onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Username</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Choose a username" 
-                className={`input-field pl-12 ${error && formData.username.length > 0 && /[^a-zA-Z0-9._]/.test(formData.username) ? 'ring-2 ring-red-500' : ''}`}
+                placeholder="arjun_sharma" 
+                className={`input-field !pl-12 ${error && formData.username.length > 0 && /[^a-zA-Z0-9._]/.test(formData.username) ? 'ring-2 ring-red-500' : ''}`}
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email Address</label>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-300 italic">Optional</span>
-            </div>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input 
-                type="email" 
-                placeholder="name@example.com" 
-                className="input-field pl-12"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
             </div>
           </div>
@@ -129,7 +88,7 @@ export default function SignupPage() {
               <input 
                 type="password" 
                 placeholder="........" 
-                className="input-field pl-12"
+                className="input-field !pl-12"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 required
@@ -144,7 +103,7 @@ export default function SignupPage() {
               <input 
                 type="password" 
                 placeholder="........" 
-                className={`input-field pl-12 ${error === 'Passwords do not match' ? 'ring-2 ring-red-500' : ''}`}
+                className={`input-field !pl-12 ${error === 'Passwords do not match' ? 'ring-2 ring-red-500' : ''}`}
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 required

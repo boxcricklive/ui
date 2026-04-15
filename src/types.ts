@@ -16,6 +16,7 @@ export interface BallDto {
   isWicket?: boolean;
   wicketType?: string;
   dismissedUsername?: string;
+  nextBatterUsername?: string;
   customCommentary?: string;
 }
 

@@ -23,8 +23,13 @@ export default function Stats() {
     setError(null);
     try {
       if (username) {
-        const res = await api.get(`/api/Player/GetPlayerStatsByUsername?playerUsername=${encodeURIComponent(username)}`);
-        setPlayerStats(res.data);
+        try {
+          const res = await api.get(`/api/Player/GetPlayerStatsByUsername?playerUsername=${encodeURIComponent(username)}`);
+          setPlayerStats(res.data);
+        } catch (e) {
+          console.warn('Player stats endpoint not found or failed');
+          setPlayerStats(null);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching stats', err);

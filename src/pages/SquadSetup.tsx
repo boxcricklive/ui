@@ -10,6 +10,7 @@ export default function SquadSetup() {
   const [showAddPlayer, setShowAddPlayer] = useState<{ teamId: string, teamName: string } | null>(null);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,10 +43,23 @@ export default function SquadSetup() {
 
   const handleAddPlayer = async () => {
     if (!newPlayerName || !match || !showAddPlayer) return;
+    
+    const teamIndex = match.squads.findIndex((s: any) => s.teamId === showAddPlayer.teamId);
+    if (teamIndex > -1) {
+      const currentSquadCount = match.squads[teamIndex].squadMembers.length;
+      const squadStrength = match.squadStrength || 11;
+      
+      if (currentSquadCount >= squadStrength) {
+        setError(`Cannot add more than ${squadStrength} players to this squad.`);
+        return;
+      }
+    }
+
     setLoading(true);
+    setError(null);
     try {
       const updatedSquads = [...match.squads];
-      const teamIndex = updatedSquads.findIndex(s => s.teamId === showAddPlayer.teamId);
+      const teamIndex = updatedSquads.findIndex((s: any) => s.teamId === showAddPlayer.teamId);
       if (teamIndex > -1) {
         updatedSquads[teamIndex].squadMembers.push(newPlayerName);
         
@@ -230,13 +244,23 @@ export default function SquadSetup() {
               ))}
 
               {/* Add Player Button */}
-              <button 
-                onClick={() => setShowAddPlayer({ teamId: squad.teamId, teamName: squad.teamName })}
-                className="w-full mt-4 py-4 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center gap-3 text-gray-400 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-all group"
-              >
-                <UserPlus size={18} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Add Player</span>
-              </button>
+              {squad.squadMembers.length < (match.squadStrength || 11) ? (
+                <button 
+                  onClick={() => {
+                    setError(null);
+                    setShowAddPlayer({ teamId: squad.teamId, teamName: squad.teamName });
+                  }}
+                  className="w-full mt-4 py-4 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center gap-3 text-gray-400 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-all group"
+                >
+                  <UserPlus size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Add Player</span>
+                </button>
+              ) : (
+                <div className="w-full mt-4 py-4 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center gap-3 text-gray-300 bg-gray-50/50 cursor-not-allowed">
+                  <CheckCircle2 size={18} className="text-brand-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Squad Full</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -263,6 +287,11 @@ export default function SquadSetup() {
             </div>
 
             <div className="space-y-4">
+              {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-red-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Player Name</label>
                 <input 

@@ -307,7 +307,7 @@ export function Scoring() {
 
       const isWicket = selectedRuns === 'W';
       const runsOffBat = typeof selectedRuns === 'number' ? selectedRuns : 0;
-      const extraRuns = extraType ? 1 : 0;
+      const extraRuns = (extraType === 'WD' || extraType === 'NB') ? 1 : 0;
 
       const currentStriker = striker;
       const currentNonStriker = nonStriker;
@@ -535,6 +535,71 @@ export function Scoring() {
 
       if (undoPayload) {
         await api.post('/api/Match/undo-ball', undoPayload);
+        
+        // After undoing from balls collection, we need to revert the match state (batting stats order/out status)
+        if (lastBall && lastBall.inningsNo === currentInnings.inningsNo) {
+          const matchRes = await api.get(`/api/Match/GetMatch/${matchId}`);
+          const updatedMatch = matchRes.data;
+          const targetInningsIdx = updatedMatch.inningsList.findIndex((inn: any) => inn.inningsNo === lastBall.inningsNo);
+          
+          if (targetInningsIdx !== -1) {
+            const innings = updatedMatch.inningsList[targetInningsIdx];
+            let stats = [...(innings.battingStats || [])];
+
+            // 1. If it was a wicket, restore the dismissed batter
+            if (lastBall.isWicket && lastBall.dismissedUsername) {
+              const dismissedIdx = stats.findIndex(s => s.playerUsername === lastBall.dismissedUsername);
+              if (dismissedIdx !== -1) {
+                stats[dismissedIdx].isOut = false;
+                stats[dismissedIdx].wicketType = null;
+              }
+              
+              // 2. Remove the next batter who was added (if they haven't played anything yet)
+              if (lastBall.nextBatterUsername) {
+                const nextBatterIdx = stats.findIndex(s => s.playerUsername === lastBall.nextBatterUsername);
+                if (nextBatterIdx !== -1) {
+                  const batterStat = stats[nextBatterIdx];
+                  // Only remove if they didn't face any balls or score runs (i.e., they were just added)
+                  if ((batterStat.ballsFaced || 0) === 0 && (batterStat.runs || 0) === 0) {
+                    stats.splice(nextBatterIdx, 1);
+                  }
+                }
+              }
+            }
+
+            // 3. Restore the striker and non-striker positions
+            const sUser = lastBall.strikerUsername;
+            const nsUser = lastBall.nonStrikerUsername;
+            
+            if (sUser && nsUser) {
+              const activeStats = stats.filter(s => s.playerUsername === sUser || s.playerUsername === nsUser);
+              const otherStats = stats.filter(s => s.playerUsername !== sUser && s.playerUsername !== nsUser);
+              
+              const sStat = activeStats.find(s => s.playerUsername === sUser);
+              const nsStat = activeStats.find(s => s.playerUsername === nsUser);
+              
+              if (sStat && nsStat) {
+                stats = [sStat, nsStat, ...otherStats];
+              }
+            }
+
+            innings.battingStats = stats;
+            // Also revert wicket count if it was a wicket
+            if (lastBall.isWicket) {
+              innings.totalWicketsTaken = Math.max(0, (innings.totalWicketsTaken || 0) - 1);
+            }
+            // Revert total runs
+            const totalToRevert = (lastBall.runsOffBat || 0) + (lastBall.extraRuns || 0);
+            innings.totalRunsScored = Math.max(0, (innings.totalRunsScored || 0) - totalToRevert);
+
+            updatedMatch.inningsList[targetInningsIdx] = innings;
+            
+            // Clean up and update
+            delete (updatedMatch as any).currentBowlerUsername;
+            await api.put('/api/Match/UpdateMatch', updatedMatch);
+          }
+        }
+        
         await fetchMatch(true);
       }
     } catch (err: any) {
